@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>CSSP – Penilaian Kelesuan (CISQ)</title>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #eef7ff;
+    --card: #ffffff;
+    --text: #17324d;
+    --muted: #64809a;
+    --line: #dbe8f4;
+    --accent: #1e88e5;
+    --accent2: #00bfa5;
+    --accent-soft: #e6f2fd;
+    --pass: #139b57; --pass-bg: #e3f8ec;
+    --fail: #e5484d; --fail-bg: #ffecec;
+    --neutral: #c77700; --neutral-bg: #fff4dc;
+    --shadow: 0 6px 22px rgba(30, 100, 170, .10);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; color: var(--text); line-height: 1.5;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    background: linear-gradient(180deg, #d9edff 0, var(--bg) 320px) no-repeat, var(--bg);
+  }
+  .wrap { max-width: 780px; margin: 0 auto; padding: 0 14px 110px; }
+
+  /* Hero */
+  .hero {
+    margin: 0 -14px 18px; padding: 30px 22px 56px; color: #fff;
+    background: linear-gradient(135deg, #1e88e5 0%, #00bfa5 100%);
+    border-radius: 0 0 28px 28px; position: relative; overflow: hidden;
+  }
+  .hero::before, .hero::after {
+    content: ""; position: absolute; border-radius: 50%; background: rgba(255,255,255,.12);
+  }
+  .hero::before { width: 200px; height: 200px; right: -50px; top: -70px; }
+  .hero::after  { width: 120px; height: 120px; right: 90px; bottom: -60px; }
+  .hero small { letter-spacing: .08em; text-transform: uppercase; font-size: 12px; opacity: .9; font-weight: 600; }
+  .hero h1 { font-size: 26px; margin: 6px 0 4px; line-height: 1.2; }
+  .hero p { margin: 0; opacity: .95; font-size: 14px; }
+
+  .card {
+    background: var(--card); border-radius: 16px; padding: 18px; margin: 14px 0;
+    box-shadow: var(--shadow); border: 2px solid transparent;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .card.err { border-color: var(--fail); background: #fffafa; }
+  .card.done { border-color: #bfe3ff; }
+  .intro { margin-top: -38px; position: relative; }
+  .intro p { margin: 0 0 8px; }
+  .legend { display: flex; gap: 8px; flex-wrap: wrap; font-size: 14px; }
+  .chip { background: var(--accent-soft); color: #0d5aa7; padding: 5px 12px; border-radius: 999px; font-weight: 600; }
+
+  .q-title { margin: 0 0 14px; font-weight: 600; font-size: 17px; display: flex; gap: 10px; }
+  .num {
+    flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--accent-soft); color: var(--accent); font-size: 14px; font-weight: 700;
+  }
+  .card.done .num { background: var(--accent); color: #fff; }
+
+  .scale { display: grid; grid-template-columns: repeat(7, 1fr); gap: 7px; }
+  .scale input { position: absolute; opacity: 0; pointer-events: none; }
+  .scale label {
+    text-align: center; padding: 13px 0; border: 2px solid var(--line); border-radius: 12px;
+    cursor: pointer; font-weight: 700; background: #f8fbff; color: var(--muted);
+    transition: all .15s; user-select: none;
+  }
+  .scale label:hover { border-color: var(--accent); color: var(--accent); background: #fff; }
+  .scale input:checked + label {
+    background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff;
+    border-color: transparent; transform: translateY(-2px); box-shadow: 0 6px 14px rgba(30,136,229,.35);
+  }
+  .scale input:focus-visible + label { outline: 3px solid #9bd0ff; outline-offset: 2px; }
+  .ends { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-top: 8px; font-weight: 600; }
+
+  /* Bottom bar */
+  .bar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; background: rgba(255,255,255,.96);
+    border-top: 1px solid var(--line); padding: 12px 14px; box-shadow: 0 -6px 20px rgba(30,100,170,.10);
+  }
+  .bar-in { max-width: 780px; margin: 0 auto; display: flex; align-items: center; gap: 14px; }
+  .prog { flex: 1; }
+  .prog-t { font-size: 13px; color: var(--muted); margin-bottom: 5px; font-weight: 600; }
+  .track { height: 10px; background: var(--accent-soft); border-radius: 999px; overflow: hidden; }
+  .fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 999px; transition: width .25s; }
+  button {
+    font: inherit; font-weight: 700; padding: 13px 26px; border-radius: 12px; border: 0; cursor: pointer;
+    color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent2));
+    box-shadow: 0 6px 14px rgba(30,136,229,.3); transition: transform .1s;
+  }
+  button:hover { transform: translateY(-1px); }
+  button:disabled { opacity: .55; cursor: not-allowed; }
+  button.ghost { background: #fff; color: var(--accent); border: 2px solid var(--accent); box-shadow: none; }
+
+  /* Result */
+  #result { display: none; padding: 0; overflow: hidden; }
+  .r-head { padding: 26px 22px 20px; text-align: center; }
+  .r-head.pass { background: linear-gradient(135deg, #d9f7e6, #eafcf2); }
+  .r-head.fail { background: linear-gradient(135deg, #ffe1e1, #fff0f0); }
+  .r-head.none { background: linear-gradient(135deg, #fff0cc, #fff9e8); }
+  .icon {
+    width: 72px; height: 72px; border-radius: 50%; margin: 0 auto 10px; display: grid; place-items: center;
+    font-size: 38px; color: #fff; font-weight: 700;
+  }
+  .pass .icon { background: var(--pass); } .fail .icon { background: var(--fail); } .none .icon { background: var(--neutral); }
+  .verdict { font-size: 30px; font-weight: 800; letter-spacing: .02em; margin: 0; }
+  .pass .verdict { color: var(--pass); } .fail .verdict { color: var(--fail); } .none .verdict { color: var(--neutral); }
+  .verdict-sub { margin: 6px 0 0; color: var(--text); }
+  .r-body { padding: 20px 22px 24px; }
+  .score-row { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 10px; }
+  .box { border-radius: 14px; padding: 14px 10px; text-align: center; background: var(--accent-soft); }
+  .box.main { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; }
+  .box span { display: block; font-size: 12px; font-weight: 600; opacity: .85; text-transform: uppercase; letter-spacing: .04em; }
+  .box b { display: block; font-size: 34px; line-height: 1.15; }
+  .box small { font-size: 12px; opacity: .8; }
+
+  .gauge { margin: 24px 4px 8px; }
+  .g-track { position: relative; height: 14px; border-radius: 999px; background: #dfe9f3; }
+  .g-zone { position: absolute; top: 0; bottom: 0; }
+  .g-pin {
+    position: absolute; top: -7px; width: 4px; height: 28px; background: var(--text); border-radius: 2px;
+    transform: translateX(-50%);
+  }
+  .g-pin::after {
+    content: attr(data-t); position: absolute; top: -24px; left: 50%; transform: translateX(-50%);
+    background: var(--text); color: #fff; font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 6px; white-space: nowrap;
+  }
+  .g-cut { position: absolute; top: -4px; width: 2px; height: 22px; background: #7a8da1; transform: translateX(-50%); }
+  .g-ends { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-top: 12px; font-weight: 600; }
+  .g-note { font-size: 13px; color: var(--muted); margin-top: 4px; text-align: center; }
+
+  details { margin-top: 18px; border: 2px solid var(--line); border-radius: 14px; padding: 4px 14px; }
+  summary { cursor: pointer; font-weight: 700; padding: 10px 0; color: var(--accent); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; margin-bottom: 10px; }
+  th, td { text-align: left; padding: 7px 6px; border-top: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-size: 12px; text-transform: uppercase; border-top: 0; }
+  td.c, th.c { text-align: center; }
+  .tag { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+  .tag.p { background: #e0f7f2; color: #00806b; } .tag.n { background: #fdeee0; color: #b25b00; }
+
+  .save { font-size: 14px; padding: 10px 14px; border-radius: 10px; margin-top: 16px; background: var(--accent-soft); color: #0d5aa7; font-weight: 600; }
+  .save.fail { background: var(--fail-bg); color: var(--fail); }
+  .disclaimer { font-size: 13px; color: var(--muted); margin: 14px 0 0; text-align: center; }
+  .again { text-align: center; margin-top: 16px; }
+  .hidden { display: none !important; }
+
+  @media (max-width: 480px) {
+    .hero h1 { font-size: 22px; }
+    .scale { gap: 5px; }
+    .box b { font-size: 28px; }
+    button { padding: 12px 18px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hero">
+    <small>Program Sokongan Keselamatan Perjalanan (CSSP)</small>
+    <h1>Penilaian Kelesuan</h1>
+    <p>Checklist Individual Strength Questionnaire (CISQ)</p>
+  </div>
+
+  <form id="form" novalidate>
+    <div class="card intro">
+      <p><b>Arahan:</b> Dalam tempoh <b>2 minggu</b> yang lalu, nilaikan tahap anda dalam setiap situasi berikut.</p>
+      <div class="legend">
+        <span class="chip" id="chipLow"></span>
+        <span class="chip" id="chipHigh"></span>
+      </div>
+    </div>
+    <div id="questions"></div>
+  </form>
+
+  <section id="result" class="card" aria-live="polite">
+    <div class="r-head" id="rHead">
+      <div class="icon" id="rIcon"></div>
+      <p class="verdict" id="rVerdict"></p>
+      <p class="verdict-sub" id="rSub"></p>
+    </div>
+    <div class="r-body">
+      <div class="score-row">
+        <div class="box main"><span>Jumlah Skor</span><b id="rTotal">–</b><small>daripada 140</small></div>
+        <div class="box"><span>Skor Positif</span><b id="rPos">–</b><small>9 soalan</small></div>
+        <div class="box"><span>Skor Negatif</span><b id="rNeg">–</b><small>11 soalan</small></div>
+      </div>
+
+      <div class="gauge">
+        <div class="g-track" id="gTrack">
+          <div class="g-zone" id="gZoneL"></div>
+          <div class="g-zone" id="gZoneR"></div>
+          <div class="g-cut hidden" id="gCut"></div>
+          <div class="g-pin" id="gPin"></div>
+        </div>
+        <div class="g-ends"><span>20</span><span>Julat skor CISQ</span><span>140</span></div>
+        <div class="g-note" id="gNote"></div>
+      </div>
+
+      <details>
+        <summary>Lihat skor setiap soalan</summary>
+        <table>
+          <thead><tr><th>#</th><th>Soalan</th><th class="c">Jawapan</th><th class="c">Skor</th></tr></thead>
+          <tbody id="rTable"></tbody>
+        </table>
+      </details>
+
+      <div class="save" id="rSave"></div>
+      <p class="disclaimer">Keputusan ini ialah saringan awal sahaja dan bukan diagnosis perubatan.</p>
+      <div class="again"><button type="button" class="ghost" id="again">Isi semula</button></div>
+    </div>
+  </section>
+</div>
+
+<div class="bar" id="bar">
+  <div class="bar-in">
+    <div class="prog">
+      <div class="prog-t" id="progText">0 / 20 dijawab</div>
+      <div class="track"><div class="fill" id="fill"></div></div>
+    </div>
+    <button type="button" id="submit">Hantar</button>
+  </div>
+</div>
+
+<script>
+/* ================== SETTINGS – edit these ================== */
+const CONFIG = {
+  // Paste your Google Apps Script "Web app" URL here (ends with /exec).
+  // Leave empty to test: the score shows but nothing is saved.
+  SCRIPT_URL: "https://script.google.com/macros/s/AKfycby-oViNldxJ41qQ7fS3KT-Qa9FhG_XD6YAz4XSg9_qB0MzH5oaWNlkFfC49ERipwl7t/exec",
+
+  // Pass mark (cut-off) from the program owner. Leave as null until you have it.
+  CUTOFF: null,
+
+  // true  = total score >= CUTOFF means fatigued  -> TIDAK LULUS
+  // false = total score <= CUTOFF means fatigued  -> TIDAK LULUS
+  HIGHER_MEANS_MORE_FATIGUE: true,
+
+  PASS_TEXT: "LULUS",
+  FAIL_TEXT: "TIDAK LULUS",
+  PASS_SUB: "Tahap kelesuan anda berada dalam julat yang selamat.",
+  FAIL_SUB: "Tahap kelesuan anda tinggi. Sila berehat secukupnya sebelum menunggang.",
+
+  LABEL_LOW: "Benar",         // shown at 1
+  LABEL_HIGH: "Tidak Benar"   // shown at 7
+};
+/* =========================================================== */
+
+const QUESTIONS = [
+  "Saya merasa letih",
+  "Saya merasa sangat aktif",
+  "Saya merasa sukar untuk berfikir",
+  "Saya merasa letih dari segi fizikal",
+  "Saya teringin melakukan berbagai perkara yang menarik",
+  "Saya merasa sihat dan cergas",
+  "Saya mampu melakukan banyak perkara dalam satu hari",
+  "Saya boleh menumpukan perhatian dengan agak baik",
+  "Saya merasa lemah",
+  "Saya tidak mampu melakukan banyak perkara dalam satu hari",
+  "Saya boleh menumpukan fikiran dengan baik",
+  "Saya rasa telah berehat dengan cukup",
+  "Saya rasa sukar untuk menumpukan fikiran",
+  "Saya rasa keadaan fizikal saya agak teruk",
+  "Saya mempunyai banyak rancangan",
+  "Saya cepat merasa letih",
+  "Saya mempunyai output (produktiviti) yang rendah",
+  "Saya tiada keinginan untuk melakukan apa-apa aktiviti",
+  "Fikiran saya mudah melayang",
+  "Saya rasa keadaan fizikal saya baik"
+];
+// Positive items are reverse-scored (8 - answer); all others are scored as answered.
+const POSITIVE = [2, 5, 6, 7, 8, 11, 12, 15, 20];
+
+const $ = id => document.getElementById(id);
+$("chipLow").textContent = "1 = " + CONFIG.LABEL_LOW;
+$("chipHigh").textContent = "7 = " + CONFIG.LABEL_HIGH;
+
+// Build the questions
+const qBox = $("questions");
+QUESTIONS.forEach((text, i) => {
+  const n = i + 1;
+  const card = document.createElement("div");
+  card.className = "card";
+  card.id = "card" + n;
+  let radios = "";
+  for (let v = 1; v <= 7; v++) {
+    radios += '<input type="radio" name="q' + n + '" id="q' + n + '_' + v + '" value="' + v + '">' +
+              '<label for="q' + n + '_' + v + '">' + v + '</label>';
+  }
+  card.innerHTML =
+    '<p class="q-title"><span class="num">' + n + '</span><span>' + text + '</span></p>' +
+    '<div class="scale">' + radios + '</div>' +
+    '<div class="ends"><span>' + CONFIG.LABEL_LOW + '</span><span>' + CONFIG.LABEL_HIGH + '</span></div>';
+  qBox.appendChild(card);
+});
+
+function getAnswers() {
+  return QUESTIONS.map((_, i) => {
+    const el = document.querySelector('input[name="q' + (i + 1) + '"]:checked');
+    return el ? Number(el.value) : null;
+  });
+}
+
+function updateProgress() {
+  const done = getAnswers().filter(a => a !== null).length;
+  $("progText").textContent = done + " / 20 dijawab";
+  $("fill").style.width = (done / 20 * 100) + "%";
+}
+qBox.addEventListener("change", e => {
+  updateProgress();
+  const card = e.target.closest(".card");
+  if (card) { card.classList.remove("err"); card.classList.add("done"); }
+});
+
+function score(answers) {
+  let pos = 0, neg = 0;
+  answers.forEach((a, i) => {
+    if (POSITIVE.includes(i + 1)) pos += (8 - a); else neg += a;
+  });
+  return { pos, neg, total: pos + neg };
+}
+
+// Returns "pass", "fail" or null (no cut-off set)
+function getVerdict(total) {
+  if (CONFIG.CUTOFF === null || CONFIG.CUTOFF === "") return null;
+  const fatigued = CONFIG.HIGHER_MEANS_MORE_FATIGUE ? total >= CONFIG.CUTOFF : total <= CONFIG.CUTOFF;
+  return fatigued ? "fail" : "pass";
+}
+
+function pct(v) { return Math.max(0, Math.min(100, (v - 20) / 120 * 100)); }
+
+function showResult(answers, s, verdict) {
+  const head = $("rHead");
+  head.className = "r-head " + (verdict === "pass" ? "pass" : verdict === "fail" ? "fail" : "none");
+  if (verdict === "pass") {
+    $("rIcon").textContent = "✓"; $("rVerdict").textContent = CONFIG.PASS_TEXT; $("rSub").textContent = CONFIG.PASS_SUB;
+  } else if (verdict === "fail") {
+    $("rIcon").textContent = "!"; $("rVerdict").textContent = CONFIG.FAIL_TEXT; $("rSub").textContent = CONFIG.FAIL_SUB;
+  } else {
+    $("rIcon").textContent = "i"; $("rVerdict").textContent = "SKOR DIREKODKAN";
+    $("rSub").textContent = "Pas mark (cut-off) belum ditetapkan, jadi keputusan lulus/tidak lulus belum dipaparkan.";
+  }
+
+  $("rTotal").textContent = s.total;
+  $("rPos").textContent = s.pos;
+  $("rNeg").textContent = s.neg;
+
+  // Gauge
+  const zl = $("gZoneL"), zr = $("gZoneR"), cut = $("gCut");
+  zl.style.cssText = zr.style.cssText = "";
+  if (CONFIG.CUTOFF !== null && CONFIG.CUTOFF !== "") {
+    const c = pct(CONFIG.CUTOFF);
+    const good = "#7ddba5", bad = "#ff9c9c";
+    const leftColor = CONFIG.HIGHER_MEANS_MORE_FATIGUE ? good : bad;
+    const rightColor = CONFIG.HIGHER_MEANS_MORE_FATIGUE ? bad : good;
+    zl.style.cssText = "left:0;width:" + c + "%;background:" + leftColor + ";border-radius:999px 0 0 999px";
+    zr.style.cssText = "left:" + c + "%;right:0;background:" + rightColor + ";border-radius:0 999px 999px 0";
+    cut.classList.remove("hidden"); cut.style.left = c + "%";
+    $("gNote").textContent = "Garis kelabu = pas mark (" + CONFIG.CUTOFF + ")";
+  } else {
+    cut.classList.add("hidden");
+    zl.style.cssText = "left:0;right:0;background:linear-gradient(90deg,#bfe3ff,#9ff0e0);border-radius:999px";
+    $("gNote").textContent = "";
+  }
+  const pin = $("gPin");
+  pin.style.left = pct(s.total) + "%";
+  pin.setAttribute("data-t", s.total);
+
+  // Per-question table
+  $("rTable").innerHTML = answers.map((a, i) => {
+    const n = i + 1, isPos = POSITIVE.includes(n);
+    const sc = isPos ? 8 - a : a;
+    return '<tr><td>' + n + '</td><td>' + QUESTIONS[i] + ' <span class="tag ' + (isPos ? 'p' : 'n') + '">' +
+           (isPos ? 'Positif' : 'Negatif') + '</span></td><td class="c">' + a + '</td><td class="c"><b>' + sc + '</b></td></tr>';
+  }).join("");
+
+  $("form").classList.add("hidden");
+  $("bar").classList.add("hidden");
+  $("result").style.display = "block";
+  document.querySelector(".hero").classList.add("hidden");
+  window.scrollTo({ top: 0 });
+}
+
+let sending = false;
+
+$("submit").addEventListener("click", async () => {
+  if (sending) return;
+
+  const answers = getAnswers();
+  const firstMissing = answers.findIndex(a => a === null);
+  if (firstMissing > -1) {
+    answers.forEach((a, i) => { if (a === null) $("card" + (i + 1)).classList.add("err"); });
+    $("card" + (firstMissing + 1)).scrollIntoView({ behavior: "smooth", block: "center" });
+    return;
+  }
+
+  const s = score(answers);
+  const verdict = getVerdict(s.total);
+  showResult(answers, s, verdict);
+
+  const statusText = verdict === "pass" ? "Lulus" : verdict === "fail" ? "Tidak Lulus" : "";
+
+  // Save to Google Sheet
+  const save = $("rSave");
+  if (!CONFIG.SCRIPT_URL) {
+    save.className = "save fail";
+    save.textContent = "Mod ujian: data tidak dihantar ke Google Sheet (SCRIPT_URL kosong).";
+    return;
+  }
+  sending = true;
+  save.className = "save";
+  save.textContent = "Menghantar data…";
+  try {
+    await fetch(CONFIG.SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ answers, status: statusText })
+    });
+    save.textContent = "Data anda telah dihantar. Terima kasih!";
+  } catch (err) {
+    save.className = "save fail";
+    save.textContent = "Data gagal dihantar. Semak sambungan internet anda dan cuba lagi.";
+  }
+  sending = false;
+});
+
+$("again").addEventListener("click", () => {
+  $("form").reset();
+  $("form").classList.remove("hidden");
+  $("bar").classList.remove("hidden");
+  $("result").style.display = "none";
+  document.querySelector(".hero").classList.remove("hidden");
+  document.querySelectorAll(".card.err, .card.done").forEach(c => c.classList.remove("err", "done"));
+  updateProgress();
+  window.scrollTo({ top: 0 });
+});
+
+updateProgress();
+</script>
+</body>
+</html>
