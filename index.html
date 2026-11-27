@@ -232,7 +232,7 @@
 const CONFIG = {
   // Paste your Google Apps Script "Web app" URL here (ends with /exec).
   // Leave empty to test: the score shows but nothing is saved.
-  SCRIPT_URL: "https://script.google.com/macros/s/AKfycby-oViNldxJ41qQ7fS3KT-Qa9FhG_XD6YAz4XSg9_qB0MzH5oaWNlkFfC49ERipwl7t/exec",
+  SCRIPT_URL: "https://script.google.com/macros/s/AKfycbzR9RoRmuVdBA-ePZKKKaJiZN5SKfacMYpmP_v1XMRiYLFTQrPaRAvlC-IaDPkhjMcU/exec",
 
   // Pass mark (cut-off) from the program owner. Leave as null until you have it.
   CUTOFF: null,
@@ -273,7 +273,7 @@ const QUESTIONS = [
   "Fikiran saya mudah melayang",
   "Saya rasa keadaan fizikal saya baik"
 ];
-// Positive items are reverse-scored (8 - answer); all others are scored as answered.
+// Positive items are scored as answered; negative items are reverse-scored (8 - answer).
 const POSITIVE = [2, 5, 6, 7, 8, 11, 12, 15, 20];
 
 const $ = id => document.getElementById(id);
@@ -320,7 +320,7 @@ qBox.addEventListener("change", e => {
 function score(answers) {
   let pos = 0, neg = 0;
   answers.forEach((a, i) => {
-    if (POSITIVE.includes(i + 1)) pos += (8 - a); else neg += a;
+    if (POSITIVE.includes(i + 1)) pos += a; else neg += (8 - a);
   });
   return { pos, neg, total: pos + neg };
 }
@@ -374,7 +374,7 @@ function showResult(answers, s, verdict) {
   // Per-question table
   $("rTable").innerHTML = answers.map((a, i) => {
     const n = i + 1, isPos = POSITIVE.includes(n);
-    const sc = isPos ? 8 - a : a;
+    const sc = isPos ? a : 8 - a;
     return '<tr><td>' + n + '</td><td>' + QUESTIONS[i] + ' <span class="tag ' + (isPos ? 'p' : 'n') + '">' +
            (isPos ? 'Positif' : 'Negatif') + '</span></td><td class="c">' + a + '</td><td class="c"><b>' + sc + '</b></td></tr>';
   }).join("");
