@@ -103,6 +103,8 @@
   .r-head { padding: 26px 22px 20px; text-align: center; }
   .r-head.pass { background: linear-gradient(135deg, #d9f7e6, #eafcf2); }
   .r-head.fail { background: linear-gradient(135deg, #ffe1e1, #fff0f0); }
+  .r-head.info { background: linear-gradient(135deg, #dff0ff, #e6faf5); }
+  .info .icon { background: var(--accent); } .info .verdict { color: var(--accent); }
   .r-head.none { background: linear-gradient(135deg, #fff0cc, #fff9e8); }
   .icon {
     width: 72px; height: 72px; border-radius: 50%; margin: 0 auto 10px; display: grid; place-items: center;
@@ -234,18 +236,6 @@ const CONFIG = {
   // Leave empty to test: the score shows but nothing is saved.
   SCRIPT_URL: "https://script.google.com/macros/s/AKfycbzR9RoRmuVdBA-ePZKKKaJiZN5SKfacMYpmP_v1XMRiYLFTQrPaRAvlC-IaDPkhjMcU/exec",
 
-  // Pass mark (cut-off) from the program owner. Leave as null until you have it.
-  CUTOFF: null,
-
-  // true  = total score >= CUTOFF means fatigued  -> TIDAK LULUS
-  // false = total score <= CUTOFF means fatigued  -> TIDAK LULUS
-  HIGHER_MEANS_MORE_FATIGUE: true,
-
-  PASS_TEXT: "LULUS",
-  FAIL_TEXT: "TIDAK LULUS",
-  PASS_SUB: "Tahap kelesuan anda berada dalam julat yang selamat.",
-  FAIL_SUB: "Tahap kelesuan anda tinggi. Sila berehat secukupnya sebelum menunggang.",
-
   LABEL_LOW: "Benar",         // shown at 1
   LABEL_HIGH: "Tidak Benar"   // shown at 7
 };
@@ -325,48 +315,23 @@ function score(answers) {
   return { pos, neg, total: pos + neg };
 }
 
-// Returns "pass", "fail" or null (no cut-off set)
-function getVerdict(total) {
-  if (CONFIG.CUTOFF === null || CONFIG.CUTOFF === "") return null;
-  const fatigued = CONFIG.HIGHER_MEANS_MORE_FATIGUE ? total >= CONFIG.CUTOFF : total <= CONFIG.CUTOFF;
-  return fatigued ? "fail" : "pass";
-}
-
 function pct(v) { return Math.max(0, Math.min(100, (v - 20) / 120 * 100)); }
 
-function showResult(answers, s, verdict) {
-  const head = $("rHead");
-  head.className = "r-head " + (verdict === "pass" ? "pass" : verdict === "fail" ? "fail" : "none");
-  if (verdict === "pass") {
-    $("rIcon").textContent = "✓"; $("rVerdict").textContent = CONFIG.PASS_TEXT; $("rSub").textContent = CONFIG.PASS_SUB;
-  } else if (verdict === "fail") {
-    $("rIcon").textContent = "!"; $("rVerdict").textContent = CONFIG.FAIL_TEXT; $("rSub").textContent = CONFIG.FAIL_SUB;
-  } else {
-    $("rIcon").textContent = "i"; $("rVerdict").textContent = "SKOR DIREKODKAN";
-    $("rSub").textContent = "Pas mark (cut-off) belum ditetapkan, jadi keputusan lulus/tidak lulus belum dipaparkan.";
-  }
+function showResult(answers, s) {
+  $("rHead").className = "r-head info";
+  $("rIcon").textContent = "✓";
+  $("rVerdict").textContent = "SKOR ANDA";
+  $("rSub").textContent = "Terima kasih. Berikut ialah skor penilaian kelesuan anda.";
 
   $("rTotal").textContent = s.total;
   $("rPos").textContent = s.pos;
   $("rNeg").textContent = s.neg;
 
-  // Gauge
-  const zl = $("gZoneL"), zr = $("gZoneR"), cut = $("gCut");
-  zl.style.cssText = zr.style.cssText = "";
-  if (CONFIG.CUTOFF !== null && CONFIG.CUTOFF !== "") {
-    const c = pct(CONFIG.CUTOFF);
-    const good = "#7ddba5", bad = "#ff9c9c";
-    const leftColor = CONFIG.HIGHER_MEANS_MORE_FATIGUE ? good : bad;
-    const rightColor = CONFIG.HIGHER_MEANS_MORE_FATIGUE ? bad : good;
-    zl.style.cssText = "left:0;width:" + c + "%;background:" + leftColor + ";border-radius:999px 0 0 999px";
-    zr.style.cssText = "left:" + c + "%;right:0;background:" + rightColor + ";border-radius:0 999px 999px 0";
-    cut.classList.remove("hidden"); cut.style.left = c + "%";
-    $("gNote").textContent = "Garis kelabu = pas mark (" + CONFIG.CUTOFF + ")";
-  } else {
-    cut.classList.add("hidden");
-    zl.style.cssText = "left:0;right:0;background:linear-gradient(90deg,#bfe3ff,#9ff0e0);border-radius:999px";
-    $("gNote").textContent = "";
-  }
+  // Gauge (position of the total score between 20 and 140)
+  $("gZoneL").style.cssText = "left:0;right:0;background:linear-gradient(90deg,#bfe3ff,#9ff0e0);border-radius:999px";
+  $("gZoneR").style.cssText = "";
+  $("gCut").classList.add("hidden");
+  $("gNote").textContent = "";
   const pin = $("gPin");
   pin.style.left = pct(s.total) + "%";
   pin.setAttribute("data-t", s.total);
@@ -400,10 +365,7 @@ $("submit").addEventListener("click", async () => {
   }
 
   const s = score(answers);
-  const verdict = getVerdict(s.total);
-  showResult(answers, s, verdict);
-
-  const statusText = verdict === "pass" ? "Lulus" : verdict === "fail" ? "Tidak Lulus" : "";
+  showResult(answers, s);
 
   // Save to Google Sheet
   const save = $("rSave");
@@ -420,7 +382,7 @@ $("submit").addEventListener("click", async () => {
       method: "POST",
       mode: "no-cors",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ answers, status: statusText })
+      body: JSON.stringify({ type: "CISQ", answers, status: "" })
     });
     save.textContent = "Data anda telah dihantar. Terima kasih!";
   } catch (err) {
